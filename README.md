@@ -1,59 +1,124 @@
 # Censo Escolar (INEP) — Dashboard + IA
 
-Dashboard interativo em **Streamlit** sobre os dados do **Censo Escolar (INEP)**,
-com mapas de matrículas por município e uma seção preparada para um **agente de IA**.
+Dashboard interativo em **Streamlit** sobre os dados do Censo Escolar (INEP), com mapas de matrículas por município e um chatbot integrado ao **Amazon Bedrock (Claude)** que responde perguntas em linguagem natural consultando o banco de dados automaticamente.
 
-Fonte de dados: PostgreSQL (`bigdata.dataiesb.com` / banco `iesb`).
+---
 
 ## Funcionalidades
 
-- **Filtros**: região, UF (dependente da região), localização (urbana/rural) e categoria da rede privada.
-- **KPIs**: nº de escolas e matrículas por etapa (Infantil, Fundamental, Fund. Anos Finais, Médio).
-- **🗺️ Mapa**: bolhas por município (tamanho = matrículas, cor = região) sobre o mapa do Brasil.
-- **Gráficos**: matrículas por região × etapa, por localização e top UFs.
-- **Tabela detalhada** por município + download em CSV.
-- **🤖 Pergunte à IA**: interface pronta; template de integração do agente comentado em `app.py`.
+- **Filtros** por região, UF, localização (urbana/rural) e categoria da rede privada
+- **KPIs** com número de escolas e matrículas por etapa (Infantil, Fundamental, Anos Finais, Médio)
+- **Mapa** de bolhas por município
+- **Gráficos** de matrículas por região, localização e ranking de UFs
+- **Tabela** detalhada por município com exportação CSV
+- **Chatbot com IA** — faça perguntas em português e o assistente consulta o banco automaticamente
 
-## Modelo de dados
+---
 
+## Pré-requisitos
+
+- Python 3.10 ou superior
+- Acesso ao banco PostgreSQL do IESB (`bigdata.dataiesb.com`)
+- Acesso ao portal AWS do IESB (`https://d-90663e488b.awsapps.com/start`)
+
+---
+
+## Instalação
+
+**1. Clone o repositório ou baixe o `app.py`**
+
+**2. Instale as dependências:**
+```bash
+pip install streamlit pandas plotly sqlalchemy psycopg2-binary boto3
 ```
-inep_censo_escolar  c   (1 linha por escola, co_entidade)
-  LEFT JOIN inep_censo_escolar_matricula m  ON c.co_entidade  = m.co_entidade   -- QT_MAT_*
-  JOIN      municipio                   mu  ON c.co_municipio = mu.codigo_municipio_dv  -- nome + lat/long
-  JOIN      unidade_federacao           uf  ON mu.cd_uf       = uf.cd_uf
-  JOIN      regiao                        r ON uf.cd_regiao   = r.cd_regiao
-```
 
-> As variáveis de matrícula (`qt_mat_inf`, `qt_mat_fund`, `qt_mat_fund_af`, `qt_mat_med`)
-> vivem na tabela `inep_censo_escolar_matricula`, não na `inep_censo_escolar`.
-
-## Como executar
-
+Ou se houver `requirements.txt`:
 ```bash
 pip install -r requirements.txt
+pip install boto3
+```
 
-# configure as credenciais
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# edite .streamlit/secrets.toml com usuário e senha
+---
 
+## Configuração
+
+### 1. Credenciais do banco (secrets.toml)
+
+Crie a pasta `.streamlit` dentro da pasta do projeto e o arquivo `secrets.toml` dentro dela:
+
+```
+projeto/
+  app.py
+  .streamlit/
+    secrets.toml
+```
+
+
+### 2. Credenciais AWS (Bedrock)
+
+Acesse o portal AWS do IESB:
+**https://d-90663e488b.awsapps.com/start**
+
+1. Faça login com seu usuário institucional
+2. Clique em **Sergio da Costa Cortes**
+3. Clique em **BedrockFullAccess → Credenciais de acesso programático**
+4. Vá na aba **PowerShell**
+5. Copie as 3 linhas da **Opção 1** e cole no terminal **antes** de rodar o app:
+
+```powershell
+$Env:AWS_ACCESS_KEY_ID="sua_key_id"
+$Env:AWS_SECRET_ACCESS_KEY="sua_secret_key"
+$Env:AWS_SESSION_TOKEN="seu_token"
+```
+
+> ⚠️ Essas credenciais expiram em ~8 horas. Quando expirar, repita esse passo.
+
+> ⚠️ Cole as credenciais e rode o Streamlit no **mesmo terminal**.
+
+---
+
+## Como rodar
+
+No terminal, dentro da pasta do projeto:
+
+```powershell
+# 1. Cole as credenciais AWS (passo acima)
+
+# 2. Rode o app
 streamlit run app.py
 ```
 
-O app abre em `http://localhost:8501`.
+O app abrirá automaticamente no navegador em `http://localhost:8501`
 
-## Integração com o agente de IA
+---
 
-A seção "Pergunte à IA" já tem a interface. O template de integração (Anthropic /
-Claude, incluindo o contexto do esquema das tabelas e a ideia de gerar/executar SQL)
-está comentado em `app.py`, dentro do bloco do botão **Perguntar**. Para habilitar,
-preencha a seção `[ai]` em `secrets.toml` e descomente o template.
+## Como usar o chatbot
 
-## Estrutura
+Na seção **"Pergunte à IA"** no final do dashboard, digite perguntas como:
+
+- *"Qual UF tem mais matrículas no Ensino Médio?"*
+- *"Quantas escolas rurais existem no Nordeste?"*
+- *"Compare as matrículas de SP e MG no Ensino Fundamental."*
+- *"Qual município do DF tem mais matrículas?"*
+
+O assistente consulta o banco automaticamente e responde em português.
+
+---
+
+## Estrutura do projeto
 
 ```
-app.py                       # dashboard Streamlit
-requirements.txt             # dependências
-.streamlit/secrets.toml      # credenciais (NÃO versionado)
-.streamlit/secrets.toml.example
-.gitignore
+projeto/
+  app.py              # aplicação principal
+  requirements.txt    # dependências
+  .streamlit/
+    secrets.toml      # credenciais do banco (não commitar no git)
 ```
+
+---
+
+## Observações
+
+- O arquivo `secrets.toml` **não deve ser enviado ao GitHub** — ele já está no `.gitignore`
+- As credenciais AWS são pessoais e temporárias — cada usuário pega as suas no portal do IESB
+- Fonte dos dados: INEP — Censo Escolar · Banco de dados IESB
