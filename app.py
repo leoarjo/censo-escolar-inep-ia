@@ -108,9 +108,16 @@ QUANDO PRECISAR DE DADOS:
 
 @st.cache_resource(show_spinner=False)
 def get_bedrock_client():
+    # No Streamlit Cloud as credenciais vêm de st.secrets["aws"].
+    # Localmente, se não houver secrets, o boto3 usa as variáveis de
+    # ambiente / perfil padrão ($Env:AWS_ACCESS_KEY_ID etc.).
+    aws = st.secrets.get("aws", {})
     return boto3.client(
         service_name="bedrock-runtime",
-        region_name="us-east-1",
+        region_name=aws.get("region", "us-east-1"),
+        aws_access_key_id=aws.get("aws_access_key_id") or None,
+        aws_secret_access_key=aws.get("aws_secret_access_key") or None,
+        aws_session_token=aws.get("aws_session_token") or None,
     )
 
 
